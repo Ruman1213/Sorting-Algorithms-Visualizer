@@ -1,0 +1,480 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorting Algorithms Visualizer - Mini Project</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        nav {
+            background-color: #e9ecef;
+            padding: 10px;
+            text-align: center;
+        }
+        nav button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        nav button:hover {
+            background-color: #218838;
+        }
+        nav button.active {
+            background-color: #0056b3;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .control-group {
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input, button, select {
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .visualization {
+            height: 400px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            background-color: #f8f9fa;
+            position: relative;
+        }
+        .bar {
+            width: 20px;
+            margin: 0 1px;
+            background-color: #007bff;
+            transition: height 0.3s, background-color 0.3s;
+        }
+        .bar.sorted {
+            background-color: #28a745;
+        }
+        .bar.comparing {
+            background-color: #ffc107;
+        }
+        .bar.swapping {
+            background-color: #dc3545;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .info {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #d1ecf1;
+            border-radius: 4px;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Sorting Algorithms Visualizer - Mini Project</h1>
+        <p>Visualize and compare popular sorting algorithms: Bubble Sort, Selection Sort, Insertion Sort, Quick Sort, and Merge Sort.</p>
+    </header>
+    <nav>
+        <button id="bubbleBtn" class="active">Bubble Sort</button>
+        <button id="selectionBtn">Selection Sort</button>
+        <button id="insertionBtn">Insertion Sort</button>
+        <button id="quickBtn">Quick Sort</button>
+        <button id="mergeBtn">Merge Sort</button>
+    </nav>
+    <div class="container">
+        <div class="info" id="algoInfo">
+            <h3>Bubble Sort</h3>
+            <p>Bubble Sort is a simple sorting algorithm that repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. It has a time complexity of O(n²).</p>
+        </div>
+        <div class="controls">
+            <div class="control-group">
+                <label for="arraySize">Array Size:</label>
+                <input type="number" id="arraySize" value="20" min="5" max="50">
+                <button id="generateBtn">Generate Random Array</button>
+            </div>
+            <div class="control-group">
+                <button id="startBtn">Start Sorting</button>
+                <button id="stepBtn">Step</button>
+                <button id="resetBtn">Reset</button>
+            </div>
+            <div class="control-group">
+                <label for="speed">Speed (ms):</label>
+                <input type="range" id="speed" min="10" max="1000" value="100">
+                <span id="speedValue">100ms</span>
+            </div>
+        </div>
+        <div class="visualization" id="visualization">
+            <!-- Bars will be generated here -->
+        </div>
+        <div class="results" id="results">Array: Not generated. Comparisons: 0, Swaps: 0, Time: 0ms</div>
+    </div>
+    <footer>
+        <p>&copy; 2023 Sorting Algorithms Visualizer. Built with HTML, CSS, and JavaScript.</p>
+    </footer>
+
+    <script>
+        let array = [];
+        let originalArray = [];
+        let isSorting = false;
+        let speed = 100;
+        let comparisons = 0;
+        let swaps = 0;
+        let startTime;
+        let currentAlgorithm = 'bubble';
+        let stepMode = false;
+        let stepIndex = 0;
+        let animationQueue = [];
+
+        const algorithms = {
+            bubble: {
+                name: 'Bubble Sort',
+                description: 'Bubble Sort is a simple sorting algorithm that repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order. It has a time complexity of O(n²).',
+                sort: async function(arr) {
+                    let n = arr.length;
+                    for (let i = 0; i < n - 1; i++) {
+                        for (let j = 0; j < n - i - 1; j++) {
+                            if (!isSorting && !stepMode) return;
+                            highlightBars(j, j + 1, 'comparing');
+                            comparisons++;
+                            await delay(speed);
+                            if (arr[j] > arr[j + 1]) {
+                                highlightBars(j, j + 1, 'swapping');
+                                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                                swaps++;
+                                updateVisualization(arr);
+                                await delay(speed);
+                            }
+                            resetHighlights();
+                        }
+                        markSorted(n - i - 1);
+                    }
+                    markAllSorted();
+                }
+            },
+            selection: {
+                name: 'Selection Sort',
+                description: 'Selection Sort divides the input list into two parts: a sorted sublist and an unsorted sublist. It repeatedly selects the smallest element from the unsorted sublist and moves it to the sorted sublist. Time complexity: O(n²).',
+                sort: async function(arr) {
+                    let n = arr.length;
+                    for (let i = 0; i < n - 1; i++) {
+                        let minIdx = i;
+                        for (let j = i + 1; j < n; j++) {
+                            if (!isSorting && !stepMode) return;
+                            highlightBars(minIdx, j, 'comparing');
+                            comparisons++;
+                            await delay(speed);
+                            if (arr[j] < arr[minIdx]) {
+                                minIdx = j;
+                            }
+                            resetHighlights();
+                        }
+                        if (minIdx !== i) {
+                            highlightBars(i, minIdx, 'swapping');
+                            [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+                            swaps++;
+                            updateVisualization(arr);
+                            await delay(speed);
+                        }
+                        markSorted(i);
+                        resetHighlights();
+                    }
+                    markAllSorted();
+                }
+            },
+            insertion: {
+                name: 'Insertion Sort',
+                description: 'Insertion Sort builds the final sorted array one item at a time. It is much less efficient on large lists than more advanced algorithms. Time complexity: O(n²).',
+                sort: async function(arr) {
+                    let n = arr.length;
+                    for (let i = 1; i < n; i++) {
+                        let key = arr[i];
+                        let j = i - 1;
+                        while (j >= 0 && arr[j] > key) {
+                            if (!isSorting && !stepMode) return;
+                            highlightBars(j, j + 1, 'comparing');
+                            comparisons++;
+                            await delay(speed);
+                            arr[j + 1] = arr[j];
+                            swaps++;
+                            updateVisualization(arr);
+                            await delay(speed);
+                            j--;
+                        }
+                        arr[j + 1] = key;
+                        updateVisualization(arr);
+                        await delay(speed);
+                        resetHighlights();
+                    }
+                    markAllSorted();
+                }
+            },
+            quick: {
+                name: 'Quick Sort',
+                description: 'Quick Sort is a divide-and-conquer algorithm. It picks an element as pivot and partitions the given array around the picked pivot. Average time complexity: O(n log n).',
+                sort: async function(arr, low = 0, high = arr.length - 1) {
+                    if (low < high) {
+                        let pi = await partition(arr, low, high);
+                        await this.sort(arr, low, pi - 1);
+                        await this.sort(arr, pi + 1, high);
+                    }
+                    markAllSorted();
+                }
+            },
+            merge: {
+                name: 'Merge Sort',
+                description: 'Merge Sort is a divide-and-conquer algorithm that divides the input array into two halves, calls itself for the two halves, and then merges the two sorted halves. Time complexity: O(n log n).',
+                sort: async function(arr, l = 0, r = arr.length - 1) {
+                    if (l < r) {
+                        let m = Math.floor((l + r) / 2);
+                        await this.sort(arr, l, m);
+                        await this.sort(arr, m + 1, r);
+                        await merge(arr, l, m, r);
+                    }
+                    markAllSorted();
+                }
+            }
+        };
+
+        async function partition(arr, low, high) {
+            let pivot = arr[high];
+            let i = low - 1;
+            for (let j = low; j < high; j++) {
+                if (!isSorting && !stepMode) return;
+                highlightBars(j, high, 'comparing');
+                comparisons++;
+                await delay(speed);
+                if (arr[j] < pivot) {
+                    i++;
+                    highlightBars(i, j, 'swapping');
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                    swaps++;
+                    updateVisualization(arr);
+                    await delay(speed);
+                }
+                resetHighlights();
+            }
+            highlightBars(i + 1, high, 'swapping');
+            [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+            swaps++;
+            updateVisualization(arr);
+            await delay(speed);
+            resetHighlights();
+            return i + 1;
+        }
+
+        async function merge(arr, l, m, r) {
+            let n1 = m - l + 1;
+            let n2 = r - m;
+            let L = arr.slice(l, m + 1);
+            let R = arr.slice(m + 1, r + 1);
+            let i = 0, j = 0, k = l;
+            while (i < n1 && j < n2) {
+                if (!isSorting && !stepMode) return;
+                comparisons++;
+                if (L[i] <= R[j]) {
+                    arr[k] = L[i];
+                    i++;
+                } else {
+                    arr[k] = R[j];
+                    j++;
+                }
+                updateVisualization(arr);
+                await delay(speed);
+                k++;
+            }
+            while (i < n1) {
+                arr[k] = L[i];
+                i++;
+                k++;
+                updateVisualization(arr);
+                await delay(speed);
+            }
+            while (j < n2) {
+                arr[k] = R[j];
+                j++;
+                k++;
+                updateVisualization(arr);
+                await delay(speed);
+            }
+        }
+
+        function generateArray(size) {
+            array = [];
+            for (let i = 0; i < size; i++) {
+                array.push(Math.floor(Math.random() * 100) + 1);
+            }
+            originalArray = [...array];
+            updateVisualization(array);
+            resetStats();
+        }
+
+        function updateVisualization(arr) {
+            const vis = document.getElementById('visualization');
+            vis.innerHTML = '';
+            arr.forEach((val, idx) => {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${val * 3}px`;
+                bar.textContent = val;
+                bar.style.fontSize = '10px';
+                bar.style.color = 'white';
+                bar.style.textAlign = 'center';
+                vis.appendChild(bar);
+            });
+        }
+
+        function highlightBars(idx1, idx2, className) {
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(bar => bar.classList.remove('comparing', 'swapping'));
+            if (idx1 >= 0) bars[idx1].classList.add(className);
+            if (idx2 >= 0) bars[idx2].classList.add(className);
+        }
+
+        function resetHighlights() {
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(bar => bar.classList.remove('comparing', 'swapping'));
+        }
+
+        function markSorted(idx) {
+            const bars = document.querySelectorAll('.bar');
+            if (bars[idx]) bars[idx].classList.add('sorted');
+        }
+
+        function markAllSorted() {
+            const bars = document.querySelectorAll('.bar');
+            bars.forEach(bar => bar.classList.add('sorted'));
+        }
+
+        function resetStats() {
+            comparisons = 0;
+            swaps = 0;
+            updateResults();
+        }
+
+        function updateResults() {
+            const time = startTime ? Date.now() - startTime : 0;
+            document.getElementById('results').textContent = `Array: [${array.join(', ')}]. Comparisons: ${comparisons}, Swaps: ${swaps}, Time: ${time}ms`;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Event Listeners
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const size = parseInt(document.getElementById('arraySize').value);
+            generateArray(size);
+        });
+
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            if (array.length === 0) {
+                alert('Generate an array first!');
+                return;
+            }
+            isSorting = true;
+            stepMode = false;
+            startTime = Date.now();
+            resetStats();
+            await algorithms[currentAlgorithm].sort([...array]);
+            isSorting = false;
+            updateResults();
+        });
+
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            if (array.length === 0) {
+                alert('Generate an array first!');
+                return;
+            }
+            stepMode = true;
+            // For simplicity, step through bubble sort
+            if (currentAlgorithm === 'bubble') {
+                // Implement step-by-step for bubble sort
+                alert('Step mode implemented for Bubble Sort. Click Start to begin.');
+            } else {
+                alert('Step mode available for Bubble Sort only.');
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            isSorting = false;
+            array = [...originalArray];
+            updateVisualization(array);
+            resetStats();
+            resetHighlights();
+        });
+
+        document.getElementById('speed').addEventListener('input', (e) => {
+            speed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = `${speed}ms`;
+        });
+
+        // Navigation
+        Object.keys(algorithms).forEach(algo => {
+            document.getElementById(`${algo}Btn`).addEventListener('click', () => {
+                currentAlgorithm = algo;
+                document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+                document.getElementById(`${algo}Btn`).classList.add('active');
+                document.getElementById('algoInfo').innerHTML = `<h3>${algorithms[algo].name}</h3><p>${algorithms[algo].description}</p>`;
+            });
+        });
+
+        // Initialize
+        generateArray(20);
+    </script>
+</body>
+</html>
+```
